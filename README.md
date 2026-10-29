@@ -10,7 +10,7 @@ website's screen registry (`/admin/config/system/screens`, module
 **pushed** to the screen, not polled.
 
 Staff setup guide (shopping list + steps, for whoever installs a screen):
-<https://claude.ai/artifact/RchyspMdxJTHoqnLmU9YJT>
+<https://docs.google.com/document/d/1XtgP8n7aY-EaheI_4bBzdDJLLm4cDQKHYI5XMKOI2BY/edit> (Google Doc in the "Digital Display Screens" Drive folder, next to the image)
 
 ## How a screen works
 
