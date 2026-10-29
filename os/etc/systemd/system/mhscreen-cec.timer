@@ -1,0 +1,8 @@
+[Unit]
+Description=MakeHaven screen: reclaim the TV input at 04:00 every night (after the 03:00 reboot)
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+
+[Install]
+WantedBy=timers.target

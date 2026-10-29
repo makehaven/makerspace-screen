@@ -1,0 +1,6 @@
+[Unit]
+Description=MakeHaven screen: switch the TV back to this Pi
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/mhscreen/cec-reclaim.sh

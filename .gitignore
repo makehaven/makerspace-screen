@@ -1,0 +1,5 @@
+*.img
+*.img.xz
+*.sha256
+__pycache__/
+*.env

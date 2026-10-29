@@ -1,0 +1,13 @@
+[Unit]
+Description=MakeHaven screen: one-time setup on first boot
+ConditionPathExists=!/etc/mhscreen/provisioned
+After=local-fs.target
+Before=mhscreen-agent.service mhscreen-kiosk.service ssh.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/mhscreen/firstboot.sh
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

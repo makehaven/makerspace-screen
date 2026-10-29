@@ -1,0 +1,12 @@
+[Unit]
+Description=MakeHaven screen agent (assignment, commands, launcher page)
+After=network.target mhscreen-firstboot.service
+ConditionPathExists=/etc/mhscreen/provisioned
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/lib/mhscreen/agent.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

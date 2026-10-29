@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Send a signed command to one screen, or to all of them.
+
+  tools/mhscreen-cmd 3F9A2C ping          # ask it to report; prints the reply
+  tools/mhscreen-cmd 3F9A2C cec           # switch the TV back to the Pi now
+  tools/mhscreen-cmd 3F9A2C reload        # re-read its assignment, restart the browser
+  tools/mhscreen-cmd 3F9A2C reboot
+  tools/mhscreen-cmd 3F9A2C assign url=https://www.makehaven.org/display/slideshow label="Main TV"
+  tools/mhscreen-cmd 3F9A2C unassign
+  tools/mhscreen-cmd all reload
+
+"assign" is the stop-gap until the website's screen registry is live; once it
+is, assign screens there and use "reload" to make a screen pick it up at once.
+
+Reads NTFY_URL, NTFY_TOPIC and CMD_SECRET from the same settings file the image
+build uses (~/.config/makehaven/screen-build.env, or $MHSCREEN_SECRETS).
+"""
+
+import hashlib
+import hmac
+import json
+import os
+import shlex
+import sys
+import threading
+import time
+import urllib.request
+
+
+def load_settings():
+    path = os.environ.get("MHSCREEN_SECRETS", os.path.expanduser("~/.config/makehaven/screen-build.env"))
+    settings = {}
+    with open(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                settings[key] = shlex.split(value)[0] if value else ""
+    return settings
+
+
+def main(argv):
+    if len(argv) < 3:
+        print(__doc__)
+        return 2
+    to, cmd = argv[1].upper() if argv[1] != "all" else "all", argv[2]
+    args = {}
+    for pair in argv[3:]:
+        key, _, value = pair.partition("=")
+        args[key] = value
+    s = load_settings()
+    base = s["NTFY_URL"].rstrip("/")
+    topic = s["NTFY_TOPIC"]
+
+    replies = []
+    if cmd == "ping":
+        # Listen on the status topic before sending, so the reply is not missed.
+        def listen():
+            url = f"{base}/{topic}-status/json?since={int(time.time())}"
+            try:
+                with urllib.request.urlopen(url, timeout=15) as resp:
+                    for raw in resp:
+                        event = json.loads(raw)
+                        if event.get("event") == "message":
+                            replies.append(json.loads(event["message"]))
+            except Exception:  # noqa: BLE001 - timeout ends the listen.
+                pass
+        listener = threading.Thread(target=listen, daemon=True)
+        listener.start()
+        time.sleep(1)
+
+    ts = int(time.time())
+    payload = f"{to}|{cmd}|{json.dumps(args, sort_keys=True, separators=(',', ':'))}|{ts}"
+    sig = hmac.new(s["CMD_SECRET"].encode(), payload.encode(), hashlib.sha256).hexdigest()
+    body = json.dumps({"to": to, "cmd": cmd, "args": args, "ts": ts, "sig": sig}).encode()
+    urllib.request.urlopen(urllib.request.Request(f"{base}/{topic}", data=body, method="POST"), timeout=15).close()
+    print(f"sent {cmd} to {to}")
+
+    if cmd == "ping":
+        listener.join(timeout=15)
+        if not replies:
+            print("no reply within 15s (screen off, offline, or not this fleet)")
+        for r in replies:
+            print(json.dumps(r, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

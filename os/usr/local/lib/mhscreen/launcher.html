@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MakeHaven Screen</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1b1b1b; color: #f4f1ec;
+    font-family: "DejaVu Sans", "Noto Sans", sans-serif; overflow: hidden; cursor: none; }
+  main { height: 100%; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center; gap: 3vh; padding: 0 6vw; box-sizing: border-box; }
+  .brand { font-size: 5vmin; font-weight: 700; letter-spacing: .04em; }
+  .brand span { color: #c9302c; }
+  .id-label { font-size: 3vmin; color: #b9b2a8; text-transform: uppercase; letter-spacing: .2em; }
+  .id { font-size: 16vmin; font-weight: 700; letter-spacing: .12em; color: #fff;
+    background: #8b1919; padding: 1vh 4vw; border-radius: 2vmin; font-family: "DejaVu Sans Mono", monospace; }
+  .message { font-size: 4vmin; max-width: 80vw; line-height: 1.3; }
+  .message.offline { color: #f0b429; }
+  .clock { position: fixed; top: 2vh; right: 3vw; font-size: 3vmin; color: #b9b2a8; }
+  footer { position: fixed; bottom: 2vh; left: 0; right: 0; text-align: center;
+    font-size: 2vmin; color: #7d776f; font-family: "DejaVu Sans Mono", monospace; }
+</style>
+</head>
+<body>
+<div class="clock" id="clock"></div>
+<main>
+  <div class="brand">Make<span>Haven</span> Screen</div>
+  <div class="id-label">Screen ID</div>
+  <div class="id" id="id">&middot;&middot;&middot;</div>
+  <div class="message" id="message">Starting up</div>
+</main>
+<footer id="footer"></footer>
+<script>
+  // The clock proves the page is alive: a frozen clock means the browser is stuck.
+  function tick() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  // Ask the agent on this Pi (not the internet) what to do. Once the assigned
+  // page is reachable, the agent hands back its URL and we go there.
+  async function poll() {
+    try {
+      const r = await fetch('/status', { cache: 'no-store' });
+      const s = await r.json();
+      document.getElementById('id').textContent = s.id;
+      const msg = document.getElementById('message');
+      msg.textContent = s.message;
+      msg.className = 'message' + (s.state === 'offline' || s.state === 'waiting' ? ' offline' : '');
+      document.getElementById('footer').textContent =
+        [s.hostname, s.ip || 'no IP', 'v' + s.version, s.overlay ? 'read-only' : 'writable'].join('  ·  ');
+      if (s.state === 'assigned' && s.url) {
+        window.location.replace(s.url);
+        return;
+      }
+    } catch (e) {
+      document.getElementById('message').textContent = 'Starting up';
+    }
+    setTimeout(poll, 2000);
+  }
+  poll();
+</script>
+</body>
+</html>
