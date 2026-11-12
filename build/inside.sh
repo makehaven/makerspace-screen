@@ -77,6 +77,16 @@ method=auto
 method=auto
 NM
   chmod 600 "$conn"
+  # Raspberry Pi OS ships with the wifi radio switched off in NetworkManager's
+  # saved state, and the read-only root restores that file on every boot, so
+  # the radio stayed soft-blocked and the card never joined wifi (3B8944, 11-12).
+  state=/mnt/root/var/lib/NetworkManager/NetworkManager.state
+  mkdir -p "$(dirname "$state")"
+  if [ -f "$state" ] && grep -q '^WirelessEnabled=' "$state"; then
+    sed -i 's/^WirelessEnabled=.*/WirelessEnabled=true/' "$state"
+  else
+    printf '[main]\nNetworkingEnabled=true\nWirelessEnabled=true\nWWANEnabled=true\n' >"$state"
+  fi
 fi
 
 admin_key=${ADMIN_SSH_KEY:-}
