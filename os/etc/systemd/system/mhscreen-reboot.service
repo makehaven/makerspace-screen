@@ -3,4 +3,9 @@ Description=MakeHaven screen: nightly fresh start
 
 [Service]
 Type=oneshot
+# The clock starts at the image date on every boot (no RTC battery, read-only
+# root). When NTP first syncs, the clock jumps weeks forward and systemd fires
+# the 03:00 timer at once, rebooting into the same old clock: a reboot loop.
+# Never reboot a screen that has been up less than an hour.
+ExecCondition=/bin/sh -c 'test $$(cut -d. -f1 /proc/uptime) -gt 3600'
 ExecStart=/usr/bin/systemctl reboot
