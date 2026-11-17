@@ -108,6 +108,24 @@ sudo raspi-config nonint do_overlayfs 1 && sudo reboot   # make writable to chan
 sudo raspi-config nonint do_overlayfs 0 && sudo reboot   # back to read-only
 ```
 
+## Screen stuck at a low resolution (one huge column)
+
+Some TVs, cables or extenders pass no EDID: `/sys/class/drm/card0-HDMI-A-1/edid`
+is 0 bytes and the Pi falls back to 1024x768, which rotated is a 768-wide
+page. `video=` alone does not help (the kernel adds no mode the TV did not
+list). Give it the stored 1080p profile (`os/usr/lib/firmware/edid/mh-1080p.bin`,
+made by `tools/mkedid-1080p.py`) on that Pi only:
+
+```bash
+sudo mount -o remount,rw /boot/firmware
+sudo sed -i '1s#$# drm.edid_firmware=HDMI-A-1:edid/mh-1080p.bin video=HDMI-A-1:D#' /boot/firmware/cmdline.txt
+sudo mount -o remount,ro /boot/firmware && sudo reboot
+```
+
+Images built before 2026-11-17 lack the file; copy it to
+`/media/root-ro/usr/lib/firmware/edid/` first (remount that rw, then ro).
+In use on C3800D (facilitator board) since 2026-11-17.
+
 ## Testing the agent off a Pi
 
 Every path is overridable, so the agent runs on any Linux box:
